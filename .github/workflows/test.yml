@@ -11,6 +11,10 @@ on:
         description: 'Product or Amazon URL to generate carousel for'
         required: false
         default: 'https://www.amazon.com/dp/B0CX23F8H8'
+      image_url:
+        description: 'Direct Product Photo Image URL (Optional)'
+        required: false
+        default: 'https://raw.githubusercontent.com/meanusarcanus/shopee_scraper_api/master/assets/shopee_logo.jpg'
       theme:
         description: 'Visual Theme (dark_cyan, emerald, purple, minimal_white)'
         required: false
@@ -59,14 +63,16 @@ jobs:
         from index import generate_slides, GenerateSlidesRequest
 
         url = '${{ github.event.inputs.product_url }}' or 'https://www.amazon.com/dp/B0CX23F8H8'
+        img_url = '${{ github.event.inputs.image_url }}' or 'https://raw.githubusercontent.com/meanusarcanus/shopee_scraper_api/master/assets/shopee_logo.jpg'
         theme = '${{ github.event.inputs.theme }}' or 'dark_cyan'
         brand = '${{ github.event.inputs.brand_name }}' or '@TechGearDaily'
         tag = '${{ github.event.inputs.amazon_affiliate_tag }}' or 'techspecdiges-20'
 
-        print(f'🚀 Generating 1080x1350 Carousel Post for URL: {url} [Theme: {theme}] [Brand: {brand}]')
+        print(f'🚀 Generating 1080x1350 Carousel Post for URL: {url} [Theme: {theme}] [Brand: {brand}] [Image: {img_url}]')
         
         req = GenerateSlidesRequest(
             product_url=url,
+            image_url=img_url,
             theme=theme,
             brand_name=brand,
             amazon_affiliate_tag=tag

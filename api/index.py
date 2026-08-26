@@ -44,6 +44,7 @@ class GenerateSlidesRequest(BaseModel):
     product_url: Optional[str] = Field(default="https://www.amazon.com/dp/B0CX23F8H8", description="Product or E-commerce URL")
     product_name: Optional[str] = Field(default=None, description="Raw product title if no URL provided")
     product_specs: Optional[Dict[str, str]] = Field(default=None, description="Technical specs key-value map")
+    image_url: Optional[str] = Field(default=None, description="Direct product photo URL to render on slides")
     theme: Optional[str] = Field(default="dark_cyan", description="Visual theme: dark_cyan, emerald, purple, minimal_white")
     brand_name: Optional[str] = Field(default="@TechGearDaily", description="Brand handle or watermark text")
     amazon_affiliate_tag: Optional[str] = Field(default="techspecdiges-20", description="Amazon Associates affiliate tag")
@@ -99,6 +100,7 @@ def generate_slides(payload: GenerateSlidesRequest):
         product_url=payload.product_url,
         product_name=payload.product_name,
         product_specs=payload.product_specs,
+        image_url=payload.image_url,
         amazon_affiliate_tag=payload.amazon_affiliate_tag
     )
 
@@ -114,7 +116,8 @@ def generate_slides(payload: GenerateSlidesRequest):
     slides = compose_full_carousel(
         copy_payload=copy_payload,
         theme_name=theme,
-        brand_name=brand
+        brand_name=brand,
+        product_image_url=product_data.get("image_url")
     )
 
     slides_objs = [SlideOutput(**s) for s in slides]
