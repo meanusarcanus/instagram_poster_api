@@ -1,0 +1,7 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Instagram Automated Carousel & Post Publisher MicroSaaS API",
+    "version": "1.0.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "actorSpecification": 1,
+  "name": "instagram-poster-ai",
+  "title": "Instagram Automated Carousel & Post Publisher Pro",
+  "description": "Turn any Amazon or E-commerce product URL into a 5-slide 1080x1350 visual carousel post, AI technical copywriting, Amazon affiliate link tagging, and automated Instagram publishing! Just $4.99/1k posts—80% cheaper!",
+  "version": "1.0.0",
+  "meta": {
+    "category": "SOCIAL_MEDIA"
+  },
+  "dockerfile": "./Dockerfile",
+  "output": "./output_schema.json"
+}

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "instagram-poster-api"
+version = "1.0.0"
+authors = [
+  { name="Meanus Arcanus", email="meanusarcanus@gmail.com" },
+]
+description = "Official Python SDK for Instagram Automated Carousel & Post Publisher MicroSaaS API."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+dependencies = [
+    "requests>=2.25.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/meanusarcanus/instagram_poster_api"
+"Bug Tracker" = "https://github.com/meanusarcanus/instagram_poster_api/issues"

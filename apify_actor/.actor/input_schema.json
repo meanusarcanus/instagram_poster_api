@@ -1,0 +1,42 @@
+{
+  "title": "Instagram Poster Pro Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "product_url": {
+      "title": "Product or Amazon URL",
+      "type": "string",
+      "description": "Amazon or E-Commerce Product URL to scrape.",
+      "editor": "textfield",
+      "prefill": "https://www.amazon.com/dp/B0CX23F8H8"
+    },
+    "product_name": {
+      "title": "Product Name (Optional)",
+      "type": "string",
+      "description": "Product title if no URL provided.",
+      "editor": "textfield"
+    },
+    "theme": {
+      "title": "Visual Design Theme",
+      "type": "string",
+      "description": "Visual color palette for 1080x1350 carousel slides.",
+      "editor": "select",
+      "default": "dark_cyan",
+      "enum": ["dark_cyan", "emerald", "purple", "minimal_white"]
+    },
+    "brand_name": {
+      "title": "Brand Handle / Watermark",
+      "type": "string",
+      "description": "Instagram handle or watermark stamped on slides.",
+      "editor": "textfield",
+      "prefill": "@TechGearDaily"
+    },
+    "amazon_affiliate_tag": {
+      "title": "Amazon Affiliate Tag",
+      "type": "string",
+      "description": "Your Amazon Associates tag for monetized affiliate links.",
+      "editor": "textfield",
+      "prefill": "techspecdiges-20"
+    }
+  }
+}
