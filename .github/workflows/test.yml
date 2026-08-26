@@ -1,4 +1,4 @@
-name: Instagram Poster API CI/CD & Automated Test Suite
+name: Instagram Poster API CI/CD & Interactive Tester
 
 on:
   push:
@@ -6,9 +6,26 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      product_url:
+        description: 'Product or Amazon URL to generate carousel for'
+        required: false
+        default: 'https://www.amazon.com/dp/B0CX23F8H8'
+      theme:
+        description: 'Visual Theme (dark_cyan, emerald, purple, minimal_white)'
+        required: false
+        default: 'dark_cyan'
+      brand_name:
+        description: 'Brand Handle / Watermark'
+        required: false
+        default: '@TechGearDaily'
+      amazon_affiliate_tag:
+        description: 'Amazon Associates Tag'
+        required: false
+        default: 'techspecdiges-20'
 
 jobs:
-  test:
+  test_and_generate:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,8 +42,54 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run Automated Test Suite (1080x1350 Canvas & API Endpoints)
+    - name: Run Automated Test Suite
       env:
         DISABLE_LLM: 'true'
       run: |
         python test_api.py
+
+    - name: Generate Custom Instagram Carousel Post
+      env:
+        LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      run: |
+        python3 -c "
+        import sys, os, base64
+        sys.path.append('api')
+        from index import generate_slides, GenerateSlidesRequest
+
+        url = '${{ github.event.inputs.product_url }}' or 'https://www.amazon.com/dp/B0CX23F8H8'
+        theme = '${{ github.event.inputs.theme }}' or 'dark_cyan'
+        brand = '${{ github.event.inputs.brand_name }}' or '@TechGearDaily'
+        tag = '${{ github.event.inputs.amazon_affiliate_tag }}' or 'techspecdiges-20'
+
+        print(f'🚀 Generating 1080x1350 Carousel Post for URL: {url} [Theme: {theme}] [Brand: {brand}]')
+        
+        req = GenerateSlidesRequest(
+            product_url=url,
+            theme=theme,
+            brand_name=brand,
+            amazon_affiliate_tag=tag
+        )
+        res = generate_slides(req)
+
+        os.makedirs('generated_slides', exist_ok=True)
+        print('\n' + '='*60)
+        print(' 📝 GENERATED INSTAGRAM CAPTION:')
+        print('='*60)
+        print(res.instagram_caption)
+        print('='*60 + '\n')
+
+        for slide in res.slides:
+            b64_data = slide.image_base64.split('base64,')[-1]
+            file_path = f'generated_slides/slide_{slide.slide_number}.png'
+            with open(file_path, 'wb') as f:
+                f.write(base64.b64decode(b64_data))
+            print(f'✓ Saved 1080x1350 Slide #{slide.slide_number} -> {file_path}')
+        "
+
+    - name: Upload Carousel Slide PNGs as GitHub Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: instagram-carousel-slides
+        path: generated_slides/*.png
