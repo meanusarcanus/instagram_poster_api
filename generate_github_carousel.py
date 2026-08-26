@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Standalone runner script for GitHub Actions interactive carousel generation
+Runs user's exact input URL (Shopee, Amazon, Shopify, eBay, etc.)
 """
 
 import sys
@@ -15,9 +16,10 @@ sys.path.insert(0, str(root_dir / "api"))
 from index import generate_slides, GenerateSlidesRequest
 
 def main():
+    # Read user's exact input URL from GitHub Actions environment variable
     product_url = os.getenv("INPUT_PRODUCT_URL", "").strip()
-    if not product_url or product_url == "https://www.amazon.com/dp/B0CX23F8H8":
-        product_url = "https://www.amazon.com/Stylus-Pen-iPad-Generation-Alternative/dp/B0DP24FQ5M"
+    if not product_url:
+        product_url = "https://www.amazon.com/dp/B0DP24FQ5M"
 
     image_url = os.getenv("INPUT_IMAGE_URL", "").strip()
     theme = os.getenv("INPUT_THEME", "").strip() or "dark_cyan"
@@ -27,11 +29,11 @@ def main():
     print("=" * 60)
     print(" 🚀 INSTAGRAM CAROUSEL GENERATOR (GITHUB ACTIONS RUNNER)")
     print("=" * 60)
-    print(f"Product URL : {product_url}")
-    print(f"Image URL   : {image_url or '(Auto-Search Engine Active)'}")
-    print(f"Theme       : {theme}")
-    print(f"Brand Name  : {brand_name}")
-    print(f"Amazon Tag  : {amazon_tag}")
+    print(f"User Input Product URL : {product_url}")
+    print(f"User Input Image URL   : {image_url or '(Auto-Search Engine Active)'}")
+    print(f"Theme                  : {theme}")
+    print(f"Brand Name             : {brand_name}")
+    print(f"Amazon Tag             : {amazon_tag}")
     print("=" * 60 + "\n")
 
     req = GenerateSlidesRequest(

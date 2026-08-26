@@ -62,18 +62,25 @@ def get_font(size: int, bold: bool = False):
 
 def fetch_product_image(image_url: Optional[str], target_size: tuple = (360, 360)) -> Optional[Image.Image]:
     """
-    Fetches and resizes real product image over HTTP.
+    Fetches and resizes real product image over HTTP with image headers.
     """
     if not image_url:
         return None
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "Referer": "https://www.google.com/"
+    }
     try:
-        res = requests.get(image_url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}, timeout=6)
-        if res.status_code == 200 and len(res.content) > 1000:
+        print(f"[Composer Engine] Fetching product photo: {image_url}")
+        res = requests.get(image_url, headers=headers, timeout=8)
+        print(f"[Composer Engine] HTTP Response: {res.status_code}, Length: {len(res.content)} bytes")
+        if res.status_code == 200 and len(res.content) > 500:
             img = Image.open(io.BytesIO(res.content))
-            # Convert to RGB to flatten transparency issues for JPEGs/PNGs
             if img.mode != "RGB":
                 img = img.convert("RGB")
             img = ImageOps.fit(img, target_size, method=Image.Resampling.LANCZOS)
+            print("✓ [Composer Engine] Successfully fitted real product image to (360x360)!")
             return img
     except Exception as e:
         print(f"[Warning] Failed to fetch image '{image_url}': {e}")
@@ -87,7 +94,7 @@ def render_slide_card(
     product_image_url: Optional[str] = None
 ) -> Image.Image:
     """
-    Renders a single 1080x1350 px Instagram Carousel Slide with optional real product image.
+    Renders a single 1080x1350 px Instagram Carousel Slide with real product image.
     """
     width, height = 1080, 1350
     palette = COLOR_THEMES.get(theme_name.lower(), COLOR_THEMES["dark_cyan"])
@@ -95,7 +102,7 @@ def render_slide_card(
     img = Image.new("RGB", (width, height), palette["bg"])
     draw = ImageDraw.Draw(img)
 
-    # 1. Header Bar & Brand Watermark
+    # Header Bar
     font_brand = get_font(28, bold=True)
     draw.text((60, 60), brand_name, fill=palette["accent"], font=font_brand)
     draw.text((width - 160, 60), f"SLIDE {slide_num}/5", fill=palette["text_sub"], font=get_font(24, bold=True))
@@ -134,7 +141,6 @@ def render_slide_card(
         draw.rounded_rectangle(photo_box, radius=24, fill=palette["bg"], outline=palette["accent"], width=3)
 
         if prod_img:
-            # Paste RGB product image directly onto canvas
             img.paste(prod_img, (width // 2 - 180, 600))
         else:
             draw.text((width // 2 - 120, 750), "📷 PRODUCT PHOTO", fill=palette["accent_secondary"], font=get_font(24, bold=True))
@@ -184,13 +190,12 @@ def render_slide_card(
             y_c += (len(wrapped_con.split("\n")) * 32) + 20
 
     elif slide_num == 4:
-        # VERDICT & SCORE SLIDE
+        # VERDICT SLIDE
         v_data = slide_data.get("slide_4_verdict", {})
         draw.text((60, 140), v_data.get("title", "Final Verdict"), fill=palette["accent"], font=font_title)
 
         draw.rounded_rectangle([(60, 240), (width - 60, 1120)], radius=30, fill=palette["card_bg"])
         
-        # Rating Circle Badge
         draw.ellipse([(width // 2 - 130, 300), (width // 2 + 130, 560)], fill=palette["accent"])
         draw.text((width // 2 - 90, 390), v_data.get("score", "9.4/10"), fill=palette["bg"], font=get_font(42, bold=True))
 
@@ -198,24 +203,22 @@ def render_slide_card(
         draw.text((100, 690), v_data.get("summary", "Highly recommended.")[:180], fill=palette["text"], font=font_body)
 
     else:
-        # CTA SLIDE (SLIDE 5)
+        # CTA SLIDE
         cta_data = slide_data.get("slide_5_cta", {})
         draw.rounded_rectangle([(60, 220), (width - 60, 1120)], radius=30, fill=palette["card_bg"])
         
         draw.text((100, 290), "READY TO BUY?", fill=palette["accent"], font=get_font(30, bold=True))
         draw.text((100, 360), cta_data.get("title", "Where To Buy"), fill=palette["text"], font=font_title)
 
-        # Store Button
         draw.rounded_rectangle([(100, 520), (width - 100, 640)], radius=24, fill=palette["accent"])
         draw.text((140, 560), "🛍️ " + cta_data.get("button_text", "Available on Amazon Prime")[:35], fill=palette["bg"], font=get_font(30, bold=True))
 
-        # Bio Link Prompt
         draw.rounded_rectangle([(100, 690), (width - 100, 810)], radius=24, fill=palette["accent_secondary"])
         draw.text((140, 730), "🔗 " + cta_data.get("prompt", f"Link in Bio: {brand_name}")[:35], fill=palette["bg"], font=get_font(30, bold=True))
 
         draw.text((width // 2 - 180, 920), "💬 Comment 'AMAZON' for direct link!", fill=palette["text_sub"], font=get_font(22, bold=True))
 
-    # 3. Footer Branding
+    # Footer
     draw.line([(60, 1240), (width - 60, 1240)], fill=palette["card_bg"], width=3)
     draw.text((60, 1270), brand_name, fill=palette["text_sub"], font=get_font(22, bold=False))
     draw.text((width - 320, 1270), "SAVE THIS POST 🔖", fill=palette["accent"], font=get_font(22, bold=True))
@@ -228,9 +231,6 @@ def compose_full_carousel(
     brand_name: str = "@TechGearDaily",
     product_image_url: Optional[str] = None
 ) -> List[Dict[str, Any]]:
-    """
-    Renders all 5 carousel slides and returns Base64 encoded PNG data strings.
-    """
     slides_output = []
 
     for i in range(1, 6):
