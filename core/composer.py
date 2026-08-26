@@ -3,7 +3,9 @@ Pillow (PIL) 1080x1350 Visual Carousel Slide Card Composer with Real Product Ima
 """
 
 import io
+import os
 import base64
+import textwrap
 import requests
 from typing import List, Dict, Any, Optional
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -62,19 +64,17 @@ def fetch_product_image(image_url: Optional[str], target_size: tuple = (400, 400
     """
     Fetches and resizes real product image over HTTP.
     """
-    if not image_url or os.getenv("DISABLE_LLM") == "true":
+    if not image_url:
         return None
     try:
-        res = requests.get(image_url, timeout=4)
+        res = requests.get(image_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
         if res.status_code == 200:
             img = Image.open(io.BytesIO(res.content)).convert("RGBA")
             img = ImageOps.fit(img, target_size, method=Image.Resampling.LANCZOS)
             return img
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"[Warning] Failed to fetch image '{image_url}': {e}")
     return None
-
-import os
 
 def render_slide_card(
     slide_num: int,
@@ -98,8 +98,8 @@ def render_slide_card(
     draw.text((width - 160, 60), f"SLIDE {slide_num}/5", fill=palette["text_sub"], font=get_font(24, bold=True))
     draw.line([(60, 110), (width - 60, 110)], fill=palette["card_bg"], width=4)
 
-    font_title = get_font(44, bold=True)
-    font_body = get_font(30, bold=False)
+    font_title = get_font(38, bold=True)
+    font_body = get_font(28, bold=False)
 
     # Fetch Real Product Image (if available)
     prod_img = fetch_product_image(product_image_url, target_size=(360, 360))
@@ -117,19 +117,23 @@ def render_slide_card(
         draw.rounded_rectangle([(100, 200), (450, 260)], radius=18, fill=palette["accent"])
         draw.text((120, 218), "FEATURED REVIEW", fill=palette["bg"], font=get_font(22, bold=True))
 
-        # Title & Subtitle
-        draw.text((100, 290), title_text[:65], fill=palette["text"], font=font_title)
-        draw.text((100, 480), sub_text[:90], fill=palette["text_sub"], font=font_body)
+        # Title (wrapped to 26 chars per line) & Subtitle
+        wrapped_title = textwrap.fill(title_text[:85], width=26)
+        draw.text((100, 280), wrapped_title, fill=palette["text"], font=font_title)
+        
+        # Position subtitle below wrapped title
+        title_lines = len(wrapped_title.split("\n"))
+        sub_y = 280 + (title_lines * 48) + 20
+        draw.text((100, sub_y), sub_text[:80], fill=palette["text_sub"], font=font_body)
 
         # Real Product Photo Showcase Box
-        photo_box = [(width // 2 - 200, 570), (width // 2 + 200, 970)]
+        photo_box = [(width // 2 - 200, 580), (width // 2 + 200, 980)]
         draw.rounded_rectangle(photo_box, radius=24, fill=palette["bg"], outline=palette["accent"], width=3)
 
         if prod_img:
-            img.paste(prod_img, (width // 2 - 180, 590), prod_img)
+            img.paste(prod_img, (width // 2 - 180, 600), prod_img)
         else:
-            # Fallback Product Icon Drawing
-            draw.text((width // 2 - 120, 740), "📷 PRODUCT PHOTO", fill=palette["accent_secondary"], font=get_font(24, bold=True))
+            draw.text((width // 2 - 120, 750), "📷 PRODUCT PHOTO", fill=palette["accent_secondary"], font=get_font(24, bold=True))
 
         # Swipe Badge
         draw.rounded_rectangle([(width // 2 - 180, 1030), (width // 2 + 180, 1100)], radius=22, fill=palette["accent_secondary"])
