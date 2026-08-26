@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       product_url:
-        description: 'Product URL (Shopee, Amazon, Shopify, eBay, etc.)'
+        description: 'Product URL (Amazon, Shopee, Shopify, eBay, etc.)'
         required: false
-        default: 'https://shopee.ph/Phw-RQZN-3-In-1-Magnetic-Folding-Stand-For-Phones-Laptops-Tablets-zwp-i.1856006428.55266326584'
+        default: 'https://www.amazon.com/dp/B0DP24FQ5M'
       image_url:
         description: 'Direct Product Photo Image URL (Optional - leave empty for auto-search)'
         required: false

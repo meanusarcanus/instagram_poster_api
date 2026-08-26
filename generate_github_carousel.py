@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Standalone runner script for GitHub Actions interactive carousel generation
-Runs user's exact input URL (Shopee, Amazon, Shopify, eBay, etc.)
+Runs user's exact input URL (Amazon, Shopee, Shopify, eBay, etc.)
 """
 
 import sys
@@ -18,7 +18,7 @@ from index import generate_slides, GenerateSlidesRequest
 def main():
     product_url = os.getenv("INPUT_PRODUCT_URL", "").strip()
     if not product_url:
-        product_url = "https://shopee.ph/Phw-RQZN-3-In-1-Magnetic-Folding-Stand-For-Phones-Laptops-Tablets-zwp-i.1856006428.55266326584"
+        product_url = "https://www.amazon.com/dp/B0DP24FQ5M"
 
     image_url = os.getenv("INPUT_IMAGE_URL", "").strip()
     theme = os.getenv("INPUT_THEME", "").strip() or "dark_cyan"
