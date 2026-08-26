@@ -111,8 +111,12 @@ def generate_slides(payload: GenerateSlidesRequest):
     copy_payload = generate_carousel_copy(
         product_data=product_data,
         brand_name=brand,
-        amazon_tag=payload.amazon_affiliate_tag
+        amazon_tag=payload.affiliate_id or payload.amazon_affiliate_tag
     )
+
+    store_info = product_data.get("store_info", {})
+    if store_info.get("badge"):
+        copy_payload["badge_text"] = store_info.get("badge")
 
     slides = compose_full_carousel(
         copy_payload=copy_payload,

@@ -123,9 +123,11 @@ def render_slide_card(
         # Outer Hook Box Card
         draw.rounded_rectangle([(60, 140), (width - 60, 1180)], radius=30, fill=palette["card_bg"])
         
-        # Featured Review Badge
-        draw.rounded_rectangle([(90, 175), (440, 235)], radius=18, fill=palette["accent"])
-        draw.text((110, 193), "FEATURED REVIEW", fill=palette["bg"], font=get_font(22, bold=True))
+        # Dynamic Store Feature Badge (SHOPEE FIND, LAZADA CHOICE, AMAZON CHOICE, etc.)
+        badge_text = slide_data.get("badge_text") or "FEATURED REVIEW"
+        badge_w = max(350, len(badge_text) * 18 + 40)
+        draw.rounded_rectangle([(90, 175), (90 + badge_w, 235)], radius=18, fill=palette["accent"])
+        draw.text((110, 193), badge_text, fill=palette["bg"], font=get_font(22, bold=True))
 
         # Title (wrapped to 26 chars per line) & Subtitle
         wrapped_title = textwrap.fill(title_text[:85], width=26)

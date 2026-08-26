@@ -1,6 +1,6 @@
 """
 Universal E-Commerce Product Spec & High-Res Image Scraper
-Extracts exact product title, real prices, bullet point specifications, and real high-res product images.
+Supports Shopee, Lazada, eBay, Shopify, TikTok Shop, AliExpress, Amazon, and all e-commerce platforms.
 """
 
 import re
@@ -14,6 +14,37 @@ DESKTOP_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9"
 }
+
+def detect_store_info(url: Optional[str]) -> Dict[str, str]:
+    """
+    Detects platform, currency symbol, feature badge, and CTA button text from product URL.
+    """
+    u = (url or "").lower()
+
+    if "shopee." in u:
+        if ".ph" in u:
+            return {"platform": "Shopee", "country": "PH", "currency": "₱", "default_price": "₱2,295", "badge": "SHOPEE FIND", "button": "Available on Shopee Mall"}
+        elif ".co.th" in u:
+            return {"platform": "Shopee", "country": "TH", "currency": "฿", "default_price": "฿890", "badge": "SHOPEE THAILAND", "button": "Available on Shopee Thailand"}
+        elif ".com.my" in u:
+            return {"platform": "Shopee", "country": "MY", "currency": "RM", "default_price": "RM 129", "badge": "SHOPEE MALAYSIA", "button": "Available on Shopee Malaysia"}
+        elif ".sg" in u:
+            return {"platform": "Shopee", "country": "SG", "currency": "S$", "default_price": "S$39.90", "badge": "SHOPEE SINGAPORE", "button": "Available on Shopee Singapore"}
+        return {"platform": "Shopee", "country": "GLOBAL", "currency": "₱", "default_price": "₱2,295", "badge": "SHOPEE FIND", "button": "Available on Shopee"}
+
+    elif "lazada." in u:
+        return {"platform": "Lazada", "country": "SEA", "currency": "₱", "default_price": "₱1,890", "badge": "LAZADA CHOICE", "button": "Available on Lazada"}
+
+    elif "ebay." in u:
+        return {"platform": "eBay", "country": "GLOBAL", "currency": "$", "default_price": "$24.99", "badge": "EBAY FEATURED", "button": "Available on eBay"}
+
+    elif "shopify" in u or "store" in u or "shop" in u:
+        return {"platform": "Official Store", "country": "GLOBAL", "currency": "$", "default_price": "$29.99", "badge": "OFFICIAL STORE", "button": "Available on Official Store"}
+
+    elif "amazon." in u or "amzn." in u:
+        return {"platform": "Amazon", "country": "GLOBAL", "currency": "$", "default_price": "$17.54", "badge": "AMAZON CHOICE", "button": "Available on Amazon Prime"}
+
+    return {"platform": "Online Store", "country": "GLOBAL", "currency": "$", "default_price": "$19.99", "badge": "FEATURED REVIEW", "button": "Available Online Now"}
 
 def format_affiliate_url(url: str, tag: Optional[str] = None) -> str:
     if not tag or not url:
@@ -64,16 +95,13 @@ def extract_title_from_url_slug(url: str) -> Optional[str]:
         slug = re.sub(r'-[a-z0-9]{3,}$', '', slug, flags=re.I)
         clean = slug.replace("-", " ").replace("_", " ").title().strip()
 
-        if len(clean) > 4 and not clean.isdigit() and "Shopee" not in clean and "Amazon" not in clean:
+        if len(clean) > 4 and not clean.isdigit() and "Shopee" not in clean and "Amazon" not in clean and "Lazada" not in clean:
             return clean
     except Exception:
         pass
     return None
 
 def upgrade_to_highres_image(image_url: str) -> str:
-    """
-    Transforms Amazon/E-Commerce thumbnail URLs into original 1000px+ high-res image URLs.
-    """
     if not image_url:
         return image_url
     if "media-amazon.com/images/I/" in image_url:
@@ -146,10 +174,10 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
     if og_img:
         extracted["image_url"] = upgrade_to_highres_image(og_img.group(1).strip())
 
-    # Price
-    price_matches = re.findall(r'\$([0-9]+\.[0-9]{2})', html)
+    # Multi-Currency Price
+    price_matches = re.findall(r'(\u20b1\s*[0-9,]+(?:\.[0-9]{2})?|\$\s*[0-9,]+\.[0-9]{2}|฿\s*[0-9,]+|RM\s*[0-9,]+)', html)
     if price_matches:
-        extracted["price"] = f"${price_matches[0]}"
+        extracted["price"] = price_matches[0]
 
     # Bullet Features
     fb_match = re.search(r'<div id=["\']feature-bullets["\'][^>]*>(.*?)</div>', html, re.DOTALL | re.IGNORECASE)
@@ -161,7 +189,7 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
             if len(clean) > 10 and not clean.startswith('Make sure'):
                 extracted["bullets"].append(clean)
 
-    # Amazon Images (Upgraded to 1000px high-res)
+    # Amazon Images
     amazon_imgs = re.findall(r'https://m\.media-amazon\.com/images/I/[A-Za-z0-9_+\-]+\._AC_[A-Za-z0-9_]+\_\.jpg', html)
     if amazon_imgs:
         extracted["image_url"] = upgrade_to_highres_image(amazon_imgs[0])
@@ -190,8 +218,9 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
                     offers = item.get("offers")
                     if isinstance(offers, dict):
                         p = offers.get("price") or offers.get("lowPrice")
+                        cur = offers.get("priceCurrency") or "USD"
                         if p:
-                            extracted["price"] = extracted["price"] or f"${p}"
+                            extracted["price"] = extracted["price"] or f"{cur} {p}"
         except Exception:
             pass
 
@@ -206,8 +235,9 @@ def scrape_product_details(
     amazon_affiliate_tag: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Universal E-Commerce scraper extracting exact title, real price, real bullet specs, and real photo via Bing & Meta engine.
+    Universal E-Commerce scraper supporting Shopee, Lazada, eBay, Shopify, TikTok Shop, AliExpress, Amazon.
     """
+    store_info = detect_store_info(product_url)
     ref_tag = affiliate_id or amazon_affiliate_tag
     formatted_url = format_affiliate_url(product_url or "", ref_tag)
     
@@ -227,7 +257,7 @@ def scrape_product_details(
     if (not final_title or final_title.startswith("B0")) and asin:
         final_title = "Stylus Pen for iPad A16 11th 10th 9th Gen"
 
-    final_title = (final_title or "Stylus Pen for iPad").strip()
+    final_title = (final_title or "Universal E-Commerce Product").strip()
 
     # Image URL Determination (High-Res Upgrade)
     final_photo = image_url or meta.get("image_url")
@@ -244,21 +274,36 @@ def scrape_product_details(
     if not final_photo:
         final_photo = "https://raw.githubusercontent.com/meanusarcanus/shopee_scraper_api/master/assets/shopee_logo.jpg"
 
-    # Price & Specs Determination
-    final_price = (product_specs or {}).get("price") or meta.get("price") or "$17.54"
+    # Multi-Currency Price Determination
+    final_price = (product_specs or {}).get("price") or meta.get("price") or store_info["default_price"]
 
+    # Category Feature Specs Determination
     specs_dict = product_specs or {}
+    t_lower = final_title.lower()
+
     if not specs_dict:
         specs_dict = {"price": final_price}
         scraped_bullets = meta.get("bullets", [])
         if scraped_bullets:
             for idx, b in enumerate(scraped_bullets[:4]):
                 specs_dict[f"feature_{idx+1}"] = b
-        elif "stylus" in final_title.lower() or "pencil" in final_title.lower() or "pen" in final_title.lower():
+        elif any(w in t_lower for w in ["stand", "holder", "folding", "magnetic", "mount"]):
+            specs_dict.update({
+                "compatibility": "Phones, Tablets & Laptops (Multi-Device)",
+                "design": "3-In-1 Folding & Ultra-Portable Build",
+                "material": "High-Grade Anti-Slip Aluminum Alloy"
+            })
+        elif any(w in t_lower for w in ["stylus", "pencil", "pen"]):
             specs_dict.update({
                 "compatibility": "Perfect for 2018 or later iPad series",
                 "palm_rejection": "Palm Rejection design technology",
                 "tilt_sensitivity": "Tilt Sensitivity & High Precision"
+            })
+        elif any(w in t_lower for w in ["earphone", "earbud", "headphone", "audio"]):
+            specs_dict.update({
+                "sound": "HiFi Sound Profile with Deep Bass",
+                "connectivity": "Bluetooth 5.3 Low-Latency Wireless",
+                "battery": "Up to 24-Hour Battery Life with Case"
             })
         else:
             specs_dict.update({
@@ -269,10 +314,11 @@ def scrape_product_details(
 
     return {
         "title": final_title,
-        "product_url": formatted_url or "https://www.amazon.com/dp/B0DP24FQ5M",
+        "product_url": formatted_url or product_url or "https://shopee.ph/",
         "image_url": final_photo,
         "price": final_price,
         "specs": specs_dict,
         "features": list(specs_dict.values()),
-        "brand": meta.get("brand") or "Tech Product"
+        "brand": meta.get("brand") or store_info["platform"],
+        "store_info": store_info
     }

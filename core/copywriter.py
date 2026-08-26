@@ -1,6 +1,6 @@
 """
 AI Technical Copywriter Generator for Instagram Carousel Posts
-Generates product-specific Pros & Cons and formatted specs for all product categories.
+Generates product-specific Pros & Cons and formatted specs for all e-commerce categories and platforms.
 """
 
 import os
@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional
 
 def generate_product_pros_cons(title: str, specs: Dict[str, Any]) -> tuple:
     """
-    Generates product-specific Pros and Cons based on product title and features.
+    Generates product-specific Pros and Cons based on product category.
     """
     t_lower = title.lower()
 
@@ -34,11 +34,11 @@ def generate_product_pros_cons(title: str, specs: Dict[str, Any]) -> tuple:
             "Requires double-tap top button to turn on",
             "Compatible only with 2018 and newer iPad models"
         ]
-    elif any(w in t_lower for w in ["headphone", "earbud", "audio", "speaker", "sound"]):
+    elif any(w in t_lower for w in ["headphone", "earbud", "audio", "speaker", "sound", "earphone"]):
         pros = [
             "Active Noise Cancellation with deep bass profile",
             "Ergonomic fit for long listening sessions",
-            "Multi-device Bluetooth 5.4 pairing"
+            "Multi-device Bluetooth pairing"
         ]
         cons = [
             "Protective case sold separately",
@@ -53,6 +53,16 @@ def generate_product_pros_cons(title: str, specs: Dict[str, Any]) -> tuple:
         cons = [
             "Requires companion smartphone app",
             "Battery needs charging every 2-3 days"
+        ]
+    elif any(w in t_lower for w in ["robot", "companion", "desktop pet"]):
+        pros = [
+            "Interactive voice & visual AI recognition",
+            "Built-in 10W wireless charging pad",
+            "Expressive animations & personality"
+        ]
+        cons = [
+            "Requires smartphone dock for full features",
+            "English voice support currently"
         ]
     else:
         bullets = [str(v) for v in specs.values() if isinstance(v, str) and len(v) > 10]
@@ -81,15 +91,18 @@ def generate_carousel_copy(
     amazon_tag: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Generates structured AI copywriting for 5 carousel slides + full Instagram caption.
+    Generates structured AI copywriting for 5 carousel slides + full Instagram caption for any store.
     """
     api_key = os.getenv("LLM_API_KEY") or os.getenv("GEMINI_API_KEY")
     if os.getenv("DISABLE_LLM") == "true":
         api_key = None
+
     title = product_data.get("title", "Premium Tech Product")
     specs = product_data.get("specs", {})
     url = product_data.get("product_url", "")
     brand = brand_name or "@TechGearDaily"
+    store_info = product_data.get("store_info", {})
+    platform = store_info.get("platform", "Online Store")
 
     pros, cons = generate_product_pros_cons(title, specs)
 
@@ -98,7 +111,7 @@ def generate_carousel_copy(
         headers = {"Content-Type": "application/json"}
         prompt = (
             "Generate a high-converting 5-slide Instagram Carousel copy payload and caption for an e-commerce product review. "
-            f"Product: '{title}'. Specs: {json.dumps(specs)}. Brand: '{brand}'. Product URL: '{url}'. "
+            f"Product: '{title}'. Platform: '{platform}'. Specs: {json.dumps(specs)}. Brand: '{brand}'. Product URL: '{url}'. "
             "Return ONLY JSON with keys: "
             "{\"slide_1_hook\": {\"title\": \"string\", \"subtitle\": \"string\"}, "
             "\"slide_2_specs\": {\"title\": \"string\", \"items\": [\"string\"]}, "
@@ -129,28 +142,38 @@ def generate_carousel_copy(
         else:
             spec_items.append(f"{k.replace('_', ' ').title()}: {v}")
 
-    amazon_cta = "🔗 Link in Bio: amzn.to/3xY8z" if "amazon" in url.lower() else f"🔗 Shop Link in Bio ({brand})"
-    comment_cta = "💬 Comment 'DEAL' below to get the direct link in your DMs!"
+    if "shopee" in platform.lower():
+        store_cta = f"🔗 Direct Link in Bio: {brand}"
+        hashtags = "#ShopeeFinds #ShopeePH #ShopeeDeals #TechReview #DeskSetup #SmartGadgets"
+    elif "lazada" in platform.lower():
+        store_cta = f"🔗 Direct Link in Bio: {brand}"
+        hashtags = "#LazadaFinds #LazadaPH #LazadaDeals #TechReview #DeskSetup #SmartGadgets"
+    elif "amazon" in platform.lower():
+        store_cta = "🔗 Link in Bio: amzn.to/3xY8z"
+        hashtags = "#AmazonDeals #AmazonPrime #TechReview #GadgetReview #SmartTech"
+    else:
+        store_cta = f"🔗 Shop Link in Bio: {brand}"
+        hashtags = "#ECommerceDeals #TechReview #GadgetReview #SmartTech #ProductivityTools"
 
     caption_text = (
         f"⚡ Check out our full review for {title}! 📱\n\n"
         "✨ Key Highlights:\n"
         + "\n".join([f"- {item}" for item in spec_items[:3]]) + "\n\n"
         f"⭐ Verdict: 9.4/10 (Must Buy)\n\n"
-        f"{amazon_cta}\n"
-        f"{comment_cta}\n\n"
+        f"{store_cta}\n"
+        "💬 Comment 'DEAL' below to get the direct link in your DMs!\n\n"
         f"Follow {brand} for daily tech reviews & deals! 🔥\n\n"
-        "#TechReview #GadgetReview #TechSetup #SmartTech #ECommerceDeals"
+        f"{hashtags}"
     )
 
     return {
         "slide_1_hook": {
             "title": f"Is {title[:32]}... Worth It?",
-            "subtitle": "Full Technical Breakdown & Honest Buyer Verdict"
+            "subtitle": f"Full Technical Breakdown & Honest {platform} Verdict"
         },
         "slide_2_specs": {
             "title": "Technical Specs & Features",
-            "items": spec_items if spec_items else ["Price: $19.99", "Build: High Precision", "Design: 3-In-1 Folding", "Warranty: 1-Year Included"]
+            "items": spec_items if spec_items else [f"Price: {store_info.get('default_price', '$19.99')}", "Build: Premium Grade", "Design: Ultra Portable", "Warranty: 1-Year Included"]
         },
         "slide_3_pros_cons": {
             "title": "Pros & Cons Breakdown",
@@ -164,7 +187,7 @@ def generate_carousel_copy(
         },
         "slide_5_cta": {
             "title": "Where To Buy",
-            "button_text": "Available Online Now",
+            "button_text": store_info.get("button", "Available Online Now"),
             "prompt": f"Link in Bio: {brand}"
         },
         "instagram_caption": caption_text
