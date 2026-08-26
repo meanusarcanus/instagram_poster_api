@@ -56,48 +56,13 @@ jobs:
       env:
         LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        INPUT_PRODUCT_URL: ${{ github.event.inputs.product_url }}
+        INPUT_IMAGE_URL: ${{ github.event.inputs.image_url }}
+        INPUT_THEME: ${{ github.event.inputs.theme }}
+        INPUT_BRAND_NAME: ${{ github.event.inputs.brand_name }}
+        INPUT_AMAZON_TAG: ${{ github.event.inputs.amazon_affiliate_tag }}
       run: |
-        python3 -c "
-        import sys, os, base64
-        sys.path.append('api')
-        from index import generate_slides, GenerateSlidesRequest
-
-        url = '${{ github.event.inputs.product_url }}'.strip()
-        if not url:
-            url = 'https://www.amazon.com/dp/B0CX23F8H8'
-
-        img_input = '${{ github.event.inputs.image_url }}'.strip()
-        img_url = img_input if img_input and not img_input.startswith("https://raw.githubusercontent") else None
-
-        theme = '${{ github.event.inputs.theme }}'.strip() or 'dark_cyan'
-        brand = '${{ github.event.inputs.brand_name }}'.strip() or '@TechGearDaily'
-        tag = '${{ github.event.inputs.amazon_affiliate_tag }}'.strip() or 'techspecdiges-20'
-
-        print(f'🚀 Generating 1080x1350 Carousel Post for URL: {url} [Theme: {theme}] [Brand: {brand}]')
-        
-        req = GenerateSlidesRequest(
-            product_url=url,
-            image_url=img_url,
-            theme=theme,
-            brand_name=brand,
-            amazon_affiliate_tag=tag
-        )
-        res = generate_slides(req)
-
-        os.makedirs('generated_slides', exist_ok=True)
-        print('\n' + '='*60)
-        print(' 📝 GENERATED INSTAGRAM CAPTION:')
-        print('='*60)
-        print(res.instagram_caption)
-        print('='*60 + '\n')
-
-        for slide in res.slides:
-            b64_data = slide.image_base64.split('base64,')[-1]
-            file_path = f'generated_slides/slide_{slide.slide_number}.png'
-            with open(file_path, 'wb') as f:
-                f.write(base64.b64decode(b64_data))
-            print(f'✓ Saved 1080x1350 Slide #{slide.slide_number} -> {file_path}')
-        "
+        python generate_github_carousel.py
 
     - name: Upload Carousel Slide PNGs as GitHub Artifact
       uses: actions/upload-artifact@v4
