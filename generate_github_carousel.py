@@ -16,15 +16,14 @@ sys.path.insert(0, str(root_dir / "api"))
 from index import generate_slides, GenerateSlidesRequest
 
 def main():
-    # Read user's exact input URL from GitHub Actions environment variable
     product_url = os.getenv("INPUT_PRODUCT_URL", "").strip()
     if not product_url:
-        product_url = "https://www.amazon.com/dp/B0DP24FQ5M"
+        product_url = "https://shopee.ph/Phw-RQZN-3-In-1-Magnetic-Folding-Stand-For-Phones-Laptops-Tablets-zwp-i.1856006428.55266326584"
 
     image_url = os.getenv("INPUT_IMAGE_URL", "").strip()
     theme = os.getenv("INPUT_THEME", "").strip() or "dark_cyan"
     brand_name = os.getenv("INPUT_BRAND_NAME", "").strip() or "@TechGearDaily"
-    amazon_tag = os.getenv("INPUT_AMAZON_TAG", "").strip() or "techspecdiges-20"
+    affiliate_id = os.getenv("INPUT_AFFILIATE_ID", "").strip() or os.getenv("INPUT_AMAZON_TAG", "").strip() or "techspecdiges-20"
 
     print("=" * 60)
     print(" 🚀 INSTAGRAM CAROUSEL GENERATOR (GITHUB ACTIONS RUNNER)")
@@ -33,7 +32,7 @@ def main():
     print(f"User Input Image URL   : {image_url or '(Auto-Search Engine Active)'}")
     print(f"Theme                  : {theme}")
     print(f"Brand Name             : {brand_name}")
-    print(f"Amazon Tag             : {amazon_tag}")
+    print(f"Affiliate / Ref Tag    : {affiliate_id}")
     print("=" * 60 + "\n")
 
     req = GenerateSlidesRequest(
@@ -41,7 +40,7 @@ def main():
         image_url=image_url or None,
         theme=theme,
         brand_name=brand_name,
-        amazon_affiliate_tag=amazon_tag
+        affiliate_id=affiliate_id
     )
 
     res = generate_slides(req)

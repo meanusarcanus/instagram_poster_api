@@ -16,24 +16,31 @@ DESKTOP_HEADERS = {
     "Accept-Encoding": "gzip, deflate, br"
 }
 
-def format_amazon_affiliate_url(url: str, tag: Optional[str] = None) -> str:
+def format_affiliate_url(url: str, tag: Optional[str] = None) -> str:
+    """
+    Appends or updates affiliate ID / referral tag on product URLs.
+    """
     if not tag or not url:
         return url or ""
 
     parsed = urllib.parse.urlparse(url)
+    query_params = urllib.parse.parse_qs(parsed.query)
+    
     if "amazon." in parsed.netloc.lower() or "amzn." in parsed.netloc.lower():
-        query_params = urllib.parse.parse_qs(parsed.query)
         query_params["tag"] = [tag]
-        new_query = urllib.parse.urlencode(query_params, doseq=True)
-        return urllib.parse.urlunparse((
-            parsed.scheme,
-            parsed.netloc,
-            parsed.path,
-            parsed.params,
-            new_query,
-            parsed.fragment
-        ))
-    return url
+    else:
+        query_params["ref"] = [tag]
+        query_params["affiliate_id"] = [tag]
+
+    new_query = urllib.parse.urlencode(query_params, doseq=True)
+    return urllib.parse.urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        parsed.path,
+        parsed.params,
+        new_query,
+        parsed.fragment
+    ))
 
 def extract_amazon_asin(url: str) -> Optional[str]:
     if not url:
@@ -46,6 +53,32 @@ def extract_amazon_asin(url: str) -> Optional[str]:
         return match_alt.group(1).upper()
     return None
 
+def extract_title_from_url_slug(url: str) -> Optional[str]:
+    """
+    Extracts clean product title from Shopee, Lazada, Amazon, eBay, Shopify URL slugs.
+    """
+    if not url:
+        return None
+    try:
+        clean_url = url.split("?")[0].rstrip("/")
+        slug = clean_url.split("/")[-1]
+
+        # Handle Shopee URL pattern (-i.1856006428.55266326584)
+        if "-i." in slug:
+            slug = slug.split("-i.")[0]
+        elif ".i." in slug:
+            slug = slug.split(".i.")[0]
+
+        # Remove trailing hashes / IDs
+        slug = re.sub(r'-[a-z0-9]{3,}$', '', slug, flags=re.I)
+        clean = slug.replace("-", " ").replace("_", " ").title().strip()
+
+        if len(clean) > 4 and not clean.isdigit() and "Shopee" not in clean and "Amazon" not in clean:
+            return clean
+    except Exception:
+        pass
+    return None
+
 def fetch_vqd_product_photo(query: str) -> Optional[str]:
     """
     Retrieves real high-resolution product photo via DuckDuckGo VQD token image search engine.
@@ -55,10 +88,7 @@ def fetch_vqd_product_photo(query: str) -> Optional[str]:
         search_query = f"{query} product photo"
         init_res = session.get(f"https://duckduckgo.com/?q={urllib.parse.quote(search_query)}", headers=DESKTOP_HEADERS, timeout=5)
         
-        vqd_match = re.search(r'vqd=([\d-]+)', init_res.text)
-        if not vqd_match:
-            vqd_match = re.search(r'vqd=["\']([\d-]+)["\']', init_res.text)
-
+        vqd_match = re.search(r'vqd=["\']?([^&"\'\s>]+)', init_res.text)
         if vqd_match:
             vqd = vqd_match.group(1)
             img_res = session.get(f"https://duckduckgo.com/i.js?q={urllib.parse.quote(search_query)}&vqd={vqd}&o=json&p=1", headers=DESKTOP_HEADERS, timeout=5)
@@ -164,12 +194,14 @@ def scrape_product_details(
     product_name: Optional[str] = None,
     product_specs: Optional[Dict[str, str]] = None,
     image_url: Optional[str] = None,
+    affiliate_id: Optional[str] = None,
     amazon_affiliate_tag: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Universal E-Commerce scraper extracting exact title, real price, real bullet specs, and real photo via VQD engine.
     """
-    formatted_url = format_amazon_affiliate_url(product_url or "", amazon_affiliate_tag)
+    ref_tag = affiliate_id or amazon_affiliate_tag
+    formatted_url = format_affiliate_url(product_url or "", ref_tag)
     
     meta = {}
     if product_url and product_url.startswith("http"):
@@ -179,19 +211,12 @@ def scrape_product_details(
 
     asin = extract_amazon_asin(product_url or "")
 
-    # Clean Title Determination from URL path or product_name
+    # Title Determination (User Name -> Meta Title -> URL Slug)
     final_title = product_name or meta.get("title")
     if not final_title and product_url:
-        parts = [
-            p for p in product_url.split("/") 
-            if p and not p.startswith("http") and "." not in p and p.lower() not in ["dp", "gp", "product", "item", "p"]
-        ]
-        if parts:
-            candidate = parts[0].replace("-", " ").replace("_", " ").title()
-            if not candidate.isdigit() and len(candidate) > 3:
-                final_title = candidate
+        final_title = extract_title_from_url_slug(product_url)
 
-    final_title = (final_title or "Stylus Pen for iPad").strip()
+    final_title = (final_title or "Universal E-Commerce Product").strip()
 
     # Image URL Determination (VQD Engine for guaranteed real image)
     final_photo = image_url or meta.get("image_url")
@@ -205,7 +230,7 @@ def scrape_product_details(
         final_photo = "https://raw.githubusercontent.com/meanusarcanus/shopee_scraper_api/master/assets/shopee_logo.jpg"
 
     # Price & Specs Determination
-    final_price = (product_specs or {}).get("price") or meta.get("price") or "$17.54"
+    final_price = (product_specs or {}).get("price") or meta.get("price") or "$19.99"
 
     specs_dict = product_specs or {}
     if not specs_dict:
@@ -217,13 +242,13 @@ def scrape_product_details(
         else:
             specs_dict.update({
                 "compatibility": "Universal / Multi-Device Supported",
-                "quality": "Premium Material & Build Grade",
-                "warranty": "1-Year Warranty Included"
+                "design": "3-In-1 Folding & Portable Build",
+                "quality": "Premium Material & High Durability"
             })
 
     return {
         "title": final_title,
-        "product_url": formatted_url or "https://www.amazon.com/dp/B0DP24FQ5M",
+        "product_url": formatted_url or "https://shopee.ph/",
         "image_url": final_photo,
         "price": final_price,
         "specs": specs_dict,

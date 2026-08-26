@@ -8,9 +8,9 @@ on:
   workflow_dispatch:
     inputs:
       product_url:
-        description: 'Product or Amazon URL to generate carousel for'
+        description: 'Product URL (Shopee, Amazon, Shopify, eBay, etc.)'
         required: false
-        default: 'https://www.amazon.com/dp/B0CX23F8H8'
+        default: 'https://shopee.ph/Phw-RQZN-3-In-1-Magnetic-Folding-Stand-For-Phones-Laptops-Tablets-zwp-i.1856006428.55266326584'
       image_url:
         description: 'Direct Product Photo Image URL (Optional - leave empty for auto-search)'
         required: false
@@ -23,8 +23,8 @@ on:
         description: 'Brand Handle / Watermark'
         required: false
         default: '@TechGearDaily'
-      amazon_affiliate_tag:
-        description: 'Amazon Associates Tag'
+      affiliate_id:
+        description: 'Affiliate ID / Referral Tag (Optional)'
         required: false
         default: 'techspecdiges-20'
 
@@ -60,7 +60,7 @@ jobs:
         INPUT_IMAGE_URL: ${{ github.event.inputs.image_url }}
         INPUT_THEME: ${{ github.event.inputs.theme }}
         INPUT_BRAND_NAME: ${{ github.event.inputs.brand_name }}
-        INPUT_AMAZON_TAG: ${{ github.event.inputs.amazon_affiliate_tag }}
+        INPUT_AFFILIATE_ID: ${{ github.event.inputs.affiliate_id }}
       run: |
         python generate_github_carousel.py
 

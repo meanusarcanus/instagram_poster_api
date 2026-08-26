@@ -14,7 +14,17 @@ def generate_product_pros_cons(title: str, specs: Dict[str, Any]) -> tuple:
     """
     t_lower = title.lower()
 
-    if any(w in t_lower for w in ["stylus", "pencil", "pen", "ipad", "tablet"]):
+    if any(w in t_lower for w in ["stand", "holder", "folding", "magnetic", "mount"]):
+        pros = [
+            "3-In-1 magnetic folding design for phones, tablets & laptops",
+            "Ultra-portable & lightweight for travel & desktop setup",
+            "Sturdy anti-slip aluminum alloy construction"
+        ]
+        cons = [
+            "Requires magnetic plate / MagSafe case for non-magnetic phones",
+            "Optimal for devices under 15-inch screen size"
+        ]
+    elif any(w in t_lower for w in ["stylus", "pencil", "pen", "ipad", "tablet"]):
         pros = [
             "Palm rejection for natural hand placement",
             "Tilt sensitivity for precise shading & line weight",
@@ -45,12 +55,11 @@ def generate_product_pros_cons(title: str, specs: Dict[str, Any]) -> tuple:
             "Battery needs charging every 2-3 days"
         ]
     else:
-        # Generic Product Pros derived from feature bullets
         bullets = [str(v) for v in specs.values() if isinstance(v, str) and len(v) > 10]
         if len(bullets) >= 2:
             pros = [
-                bullets[0][:50],
-                bullets[1][:50],
+                bullets[0][:55],
+                bullets[1][:55],
                 "Premium build quality & high durability"
             ]
         else:
@@ -120,8 +129,8 @@ def generate_carousel_copy(
         else:
             spec_items.append(f"{k.replace('_', ' ').title()}: {v}")
 
-    amazon_cta = "🔗 Link in Bio (Amazon Prime): amzn.to/3xY8z" if "amazon" in url.lower() else f"🔗 Shop at {brand}"
-    comment_cta = "💬 Comment 'AMAZON' below to get the direct link in your DMs!" if "amazon" in url.lower() else "💬 Drop a comment below with your thoughts!"
+    amazon_cta = "🔗 Link in Bio: amzn.to/3xY8z" if "amazon" in url.lower() else f"🔗 Shop Link in Bio ({brand})"
+    comment_cta = "💬 Comment 'DEAL' below to get the direct link in your DMs!"
 
     caption_text = (
         f"⚡ Check out our full review for {title}! 📱\n\n"
@@ -131,7 +140,7 @@ def generate_carousel_copy(
         f"{amazon_cta}\n"
         f"{comment_cta}\n\n"
         f"Follow {brand} for daily tech reviews & deals! 🔥\n\n"
-        "#TechReview #AmazonDeals #GadgetReview #TechSetup #SmartTech"
+        "#TechReview #GadgetReview #TechSetup #SmartTech #ECommerceDeals"
     )
 
     return {
@@ -141,7 +150,7 @@ def generate_carousel_copy(
         },
         "slide_2_specs": {
             "title": "Technical Specs & Features",
-            "items": spec_items if spec_items else ["Price: $17.54", "Build: High Precision", "Battery: Extended Playtime", "Warranty: 1-Year Included"]
+            "items": spec_items if spec_items else ["Price: $19.99", "Build: High Precision", "Design: 3-In-1 Folding", "Warranty: 1-Year Included"]
         },
         "slide_3_pros_cons": {
             "title": "Pros & Cons Breakdown",
@@ -155,7 +164,7 @@ def generate_carousel_copy(
         },
         "slide_5_cta": {
             "title": "Where To Buy",
-            "button_text": "Available on Amazon Prime",
+            "button_text": "Available Online Now",
             "prompt": f"Link in Bio: {brand}"
         },
         "instagram_caption": caption_text

@@ -41,13 +41,14 @@ app = FastAPI(
 # Pydantic Schemas
 # ==============================================================================
 class GenerateSlidesRequest(BaseModel):
-    product_url: Optional[str] = Field(default="https://www.amazon.com/dp/B0CX23F8H8", description="Product or E-commerce URL")
+    product_url: Optional[str] = Field(default="https://shopee.ph/", description="Product or E-commerce URL")
     product_name: Optional[str] = Field(default=None, description="Raw product title if no URL provided")
     product_specs: Optional[Dict[str, str]] = Field(default=None, description="Technical specs key-value map")
     image_url: Optional[str] = Field(default=None, description="Direct product photo URL to render on slides")
     theme: Optional[str] = Field(default="dark_cyan", description="Visual theme: dark_cyan, emerald, purple, minimal_white")
     brand_name: Optional[str] = Field(default="@TechGearDaily", description="Brand handle or watermark text")
-    amazon_affiliate_tag: Optional[str] = Field(default="techspecdiges-20", description="Amazon Associates affiliate tag")
+    affiliate_id: Optional[str] = Field(default="techspecdiges-20", description="Affiliate ID / Referral Tag (Optional)")
+    amazon_affiliate_tag: Optional[str] = Field(default=None, description="Legacy Amazon affiliate tag parameter")
 
 class PublishPostRequest(GenerateSlidesRequest):
     instagram_credentials: Optional[Dict[str, str]] = Field(default=None, description="Instagram Graph API account_id & access_token")
