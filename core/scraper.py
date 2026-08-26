@@ -70,12 +70,25 @@ def extract_title_from_url_slug(url: str) -> Optional[str]:
         pass
     return None
 
+def upgrade_to_highres_image(image_url: str) -> str:
+    """
+    Transforms Amazon/E-Commerce thumbnail URLs into original 1000px+ high-res image URLs.
+    """
+    if not image_url:
+        return image_url
+    if "media-amazon.com/images/I/" in image_url:
+        image_url = re.sub(r'\._AC_[^.]*', '', image_url)
+        image_url = re.sub(r'\._SL[0-9]+_', '', image_url)
+        image_url = re.sub(r'\._SX[0-9]+_', '', image_url)
+        image_url = re.sub(r'\._SY[0-9]+_', '', image_url)
+    return image_url
+
 def search_bing_product_photo(query: str) -> Optional[str]:
     """
-    Searches Bing Images for valid high-res product photo returning HTTP 200.
+    Searches Bing Images for valid 1000px+ high-res product photo returning HTTP 200.
     """
     try:
-        clean_q = " ".join(query.split()[:4]) + " product photo"
+        clean_q = " ".join(query.split()[:4]) + " product photo high res"
         search_url = f"https://www.bing.com/images/search?q={urllib.parse.quote(clean_q)}&form=HDRSC2"
         res = requests.get(search_url, headers=DESKTOP_HEADERS, timeout=5)
         if res.status_code == 200:
@@ -84,10 +97,11 @@ def search_bing_product_photo(query: str) -> Optional[str]:
                 murl_matches = re.findall(r'murl["\']:["\'](https://[^"\']+)["\']', res.text)
             for img in murl_matches:
                 if img.startswith("http") and not img.endswith(".svg") and not img.endswith(".gif"):
+                    img_upgrade = upgrade_to_highres_image(img)
                     try:
-                        img_res = requests.head(img, headers={"User-Agent": "Mozilla/5.0"}, timeout=3)
+                        img_res = requests.head(img_upgrade, headers={"User-Agent": "Mozilla/5.0"}, timeout=3)
                         if img_res.status_code == 200:
-                            return img
+                            return img_upgrade
                     except Exception:
                         pass
     except Exception as e:
@@ -130,7 +144,7 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
     # OpenGraph Image
     og_img = re.search(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
     if og_img:
-        extracted["image_url"] = og_img.group(1).strip()
+        extracted["image_url"] = upgrade_to_highres_image(og_img.group(1).strip())
 
     # Price
     price_matches = re.findall(r'\$([0-9]+\.[0-9]{2})', html)
@@ -147,10 +161,10 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
             if len(clean) > 10 and not clean.startswith('Make sure'):
                 extracted["bullets"].append(clean)
 
-    # Amazon Images
+    # Amazon Images (Upgraded to 1000px high-res)
     amazon_imgs = re.findall(r'https://m\.media-amazon\.com/images/I/[A-Za-z0-9_+\-]+\._AC_[A-Za-z0-9_]+\_\.jpg', html)
     if amazon_imgs:
-        extracted["image_url"] = amazon_imgs[0]
+        extracted["image_url"] = upgrade_to_highres_image(amazon_imgs[0])
 
     # JSON-LD Structured Data
     json_ld_matches = re.findall(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, re.DOTALL | re.IGNORECASE)
@@ -164,9 +178,10 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
                     extracted["description"] = extracted["description"] or item.get("description")
                     imgs = item.get("image")
                     if isinstance(imgs, list) and imgs:
-                        extracted["image_url"] = extracted["image_url"] or (imgs[0] if isinstance(imgs[0], str) else imgs[0].get("url"))
+                        raw_img = imgs[0] if isinstance(imgs[0], str) else imgs[0].get("url")
+                        extracted["image_url"] = extracted["image_url"] or upgrade_to_highres_image(raw_img)
                     elif isinstance(imgs, str):
-                        extracted["image_url"] = extracted["image_url"] or imgs
+                        extracted["image_url"] = extracted["image_url"] or upgrade_to_highres_image(imgs)
                     b = item.get("brand")
                     if isinstance(b, dict):
                         extracted["brand"] = extracted["brand"] or b.get("name")
@@ -214,11 +229,14 @@ def scrape_product_details(
 
     final_title = (final_title or "Stylus Pen for iPad").strip()
 
-    # Image URL Determination (Bing Search Engine for guaranteed high-res photo)
+    # Image URL Determination (High-Res Upgrade)
     final_photo = image_url or meta.get("image_url")
 
     if not final_photo or "SCLZZZZZZZ" in str(final_photo):
         final_photo = search_bing_product_photo(final_title)
+
+    if final_photo:
+        final_photo = upgrade_to_highres_image(final_photo)
 
     if not final_photo and asin:
         final_photo = f"https://images-na.ssl-images-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_SX500_.jpg"

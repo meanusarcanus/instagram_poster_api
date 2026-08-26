@@ -60,9 +60,9 @@ def get_font(size: int, bold: bool = False):
     except Exception:
         return ImageFont.load_default()
 
-def fetch_product_image(image_url: Optional[str], target_size: tuple = (360, 360)) -> Optional[Image.Image]:
+def fetch_product_image(image_url: Optional[str], target_size: tuple = (540, 540)) -> Optional[Image.Image]:
     """
-    Fetches and resizes real product image over HTTP with image headers.
+    Fetches and resizes real high-resolution product image over HTTP with image headers.
     """
     if not image_url:
         return None
@@ -72,7 +72,7 @@ def fetch_product_image(image_url: Optional[str], target_size: tuple = (360, 360
         "Referer": "https://www.google.com/"
     }
     try:
-        print(f"[Composer Engine] Fetching product photo: {image_url}")
+        print(f"[Composer Engine] Fetching high-res product photo: {image_url}")
         res = requests.get(image_url, headers=headers, timeout=8)
         print(f"[Composer Engine] HTTP Response: {res.status_code}, Length: {len(res.content)} bytes")
         if res.status_code == 200 and len(res.content) > 500:
@@ -80,7 +80,7 @@ def fetch_product_image(image_url: Optional[str], target_size: tuple = (360, 360
             if img.mode != "RGB":
                 img = img.convert("RGB")
             img = ImageOps.fit(img, target_size, method=Image.Resampling.LANCZOS)
-            print("✓ [Composer Engine] Successfully fitted real product image to (360x360)!")
+            print(f"✓ [Composer Engine] Successfully fitted high-res product photo to {target_size}!")
             return img
     except Exception as e:
         print(f"[Warning] Failed to fetch image '{image_url}': {e}")
@@ -94,7 +94,7 @@ def render_slide_card(
     product_image_url: Optional[str] = None
 ) -> Image.Image:
     """
-    Renders a single 1080x1350 px Instagram Carousel Slide with real product image.
+    Renders a single 1080x1350 px Instagram Carousel Slide with high-res product image & multi-line text wrapping.
     """
     width, height = 1080, 1350
     palette = COLOR_THEMES.get(theme_name.lower(), COLOR_THEMES["dark_cyan"])
@@ -111,8 +111,8 @@ def render_slide_card(
     font_title = get_font(38, bold=True)
     font_body = get_font(28, bold=False)
 
-    # Fetch Real Product Image (if available)
-    prod_img = fetch_product_image(product_image_url, target_size=(360, 360))
+    # Fetch High-Res Product Image (540x540 px)
+    prod_img = fetch_product_image(product_image_url, target_size=(540, 540))
 
     if slide_num == 1:
         # HOOK SLIDE
@@ -121,36 +121,36 @@ def render_slide_card(
         sub_text = h_data.get("subtitle", "Full Specs Breakdown")
 
         # Outer Hook Box Card
-        draw.rounded_rectangle([(60, 160), (width - 60, 1150)], radius=30, fill=palette["card_bg"])
+        draw.rounded_rectangle([(60, 140), (width - 60, 1180)], radius=30, fill=palette["card_bg"])
         
         # Featured Review Badge
-        draw.rounded_rectangle([(100, 200), (450, 260)], radius=18, fill=palette["accent"])
-        draw.text((120, 218), "FEATURED REVIEW", fill=palette["bg"], font=get_font(22, bold=True))
+        draw.rounded_rectangle([(90, 175), (440, 235)], radius=18, fill=palette["accent"])
+        draw.text((110, 193), "FEATURED REVIEW", fill=palette["bg"], font=get_font(22, bold=True))
 
         # Title (wrapped to 26 chars per line) & Subtitle
         wrapped_title = textwrap.fill(title_text[:85], width=26)
-        draw.text((100, 280), wrapped_title, fill=palette["text"], font=font_title)
+        draw.text((90, 255), wrapped_title, fill=palette["text"], font=font_title)
         
         # Position subtitle below wrapped title
         title_lines = len(wrapped_title.split("\n"))
-        sub_y = 280 + (title_lines * 48) + 20
-        draw.text((100, sub_y), sub_text[:80], fill=palette["text_sub"], font=font_body)
+        sub_y = 255 + (title_lines * 48) + 15
+        draw.text((90, sub_y), sub_text[:80], fill=palette["text_sub"], font=font_body)
 
-        # Real Product Photo Showcase Box
-        photo_box = [(width // 2 - 200, 580), (width // 2 + 200, 980)]
-        draw.rounded_rectangle(photo_box, radius=24, fill=palette["bg"], outline=palette["accent"], width=3)
+        # High-Res Product Photo Showcase Box (540x540 px)
+        photo_box = [(width // 2 - 270, 480), (width // 2 + 270, 1020)]
+        draw.rounded_rectangle(photo_box, radius=28, fill=palette["bg"], outline=palette["accent"], width=4)
 
         if prod_img:
-            img.paste(prod_img, (width // 2 - 180, 600))
+            img.paste(prod_img, (width // 2 - 270, 480))
         else:
-            draw.text((width // 2 - 120, 750), "📷 PRODUCT PHOTO", fill=palette["accent_secondary"], font=get_font(24, bold=True))
+            draw.text((width // 2 - 140, 720), "📷 PRODUCT PHOTO", fill=palette["accent_secondary"], font=get_font(28, bold=True))
 
         # Swipe Badge
-        draw.rounded_rectangle([(width // 2 - 180, 1030), (width // 2 + 180, 1100)], radius=22, fill=palette["accent_secondary"])
-        draw.text((width // 2 - 140, 1050), "SWIPE FOR SPECS ➔", fill=palette["bg"], font=get_font(24, bold=True))
+        draw.rounded_rectangle([(width // 2 - 200, 1060), (width // 2 + 200, 1140)], radius=24, fill=palette["accent_secondary"])
+        draw.text((width // 2 - 150, 1085), "SWIPE FOR SPECS ➔", fill=palette["bg"], font=get_font(24, bold=True))
 
     elif slide_num == 2:
-        # SPECS SLIDE (Multi-Line Text Wrapping)
+        # SPECS SLIDE
         s_data = slide_data.get("slide_2_specs", {})
         draw.text((60, 140), s_data.get("title", "Technical Specifications"), fill=palette["accent"], font=font_title)
 
@@ -168,7 +168,7 @@ def render_slide_card(
             y_pos += box_height + 20
 
     elif slide_num == 3:
-        # PROS & CONS SLIDE (Multi-Line Text Wrapping)
+        # PROS & CONS SLIDE
         pc_data = slide_data.get("slide_3_pros_cons", {})
         draw.text((60, 140), pc_data.get("title", "Pros & Cons Breakdown"), fill=palette["accent"], font=font_title)
 
@@ -190,33 +190,42 @@ def render_slide_card(
             y_c += (len(wrapped_con.split("\n")) * 32) + 20
 
     elif slide_num == 4:
-        # VERDICT SLIDE
+        # VERDICT SLIDE (Multi-Line Text Wrapping Fix)
         v_data = slide_data.get("slide_4_verdict", {})
         draw.text((60, 140), v_data.get("title", "Final Verdict"), fill=palette["accent"], font=font_title)
 
         draw.rounded_rectangle([(60, 240), (width - 60, 1120)], radius=30, fill=palette["card_bg"])
         
+        # Rating Circle
         draw.ellipse([(width // 2 - 130, 300), (width // 2 + 130, 560)], fill=palette["accent"])
         draw.text((width // 2 - 90, 390), v_data.get("score", "9.4/10"), fill=palette["bg"], font=get_font(42, bold=True))
 
         draw.text((100, 620), "EDITOR'S BUYER RATING", fill=palette["accent_secondary"], font=get_font(26, bold=True))
-        draw.text((100, 690), v_data.get("summary", "Highly recommended.")[:180], fill=palette["text"], font=font_body)
+        
+        # Multi-Line Summary Wrapping
+        summary_raw = v_data.get("summary", "Highly recommended daily essential.")
+        wrapped_summary = textwrap.fill(summary_raw, width=38)
+        draw.text((100, 680), wrapped_summary, fill=palette["text"], font=font_body)
 
     else:
-        # CTA SLIDE
+        # CTA SLIDE (Multi-Line Text Wrapping Fix)
         cta_data = slide_data.get("slide_5_cta", {})
         draw.rounded_rectangle([(60, 220), (width - 60, 1120)], radius=30, fill=palette["card_bg"])
         
         draw.text((100, 290), "READY TO BUY?", fill=palette["accent"], font=get_font(30, bold=True))
-        draw.text((100, 360), cta_data.get("title", "Where To Buy"), fill=palette["text"], font=font_title)
+        
+        cta_title = textwrap.fill(cta_data.get("title", "Where To Buy"), width=34)
+        draw.text((100, 360), cta_title, fill=palette["text"], font=font_title)
 
-        draw.rounded_rectangle([(100, 520), (width - 100, 640)], radius=24, fill=palette["accent"])
-        draw.text((140, 560), "🛍️ " + cta_data.get("button_text", "Available on Amazon Prime")[:35], fill=palette["bg"], font=get_font(30, bold=True))
+        draw.rounded_rectangle([(100, 540), (width - 100, 680)], radius=24, fill=palette["accent"])
+        btn_text = textwrap.fill("🛍️ " + cta_data.get("button_text", "Available Online Now"), width=30)
+        draw.text((130, 580), btn_text, fill=palette["bg"], font=get_font(28, bold=True))
 
-        draw.rounded_rectangle([(100, 690), (width - 100, 810)], radius=24, fill=palette["accent_secondary"])
-        draw.text((140, 730), "🔗 " + cta_data.get("prompt", f"Link in Bio: {brand_name}")[:35], fill=palette["bg"], font=get_font(30, bold=True))
+        draw.rounded_rectangle([(100, 730), (width - 100, 870)], radius=24, fill=palette["accent_secondary"])
+        prompt_text = textwrap.fill("🔗 " + cta_data.get("prompt", f"Link in Bio: {brand_name}"), width=30)
+        draw.text((130, 770), prompt_text, fill=palette["bg"], font=get_font(28, bold=True))
 
-        draw.text((width // 2 - 180, 920), "💬 Comment 'AMAZON' for direct link!", fill=palette["text_sub"], font=get_font(22, bold=True))
+        draw.text((width // 2 - 200, 960), "💬 Comment 'DEAL' for direct link!", fill=palette["text_sub"], font=get_font(22, bold=True))
 
     # Footer
     draw.line([(60, 1240), (width - 60, 1240)], fill=palette["card_bg"], width=3)
