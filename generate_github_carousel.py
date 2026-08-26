@@ -15,7 +15,10 @@ sys.path.insert(0, str(root_dir / "api"))
 from index import generate_slides, GenerateSlidesRequest
 
 def main():
-    product_url = os.getenv("INPUT_PRODUCT_URL", "").strip() or "https://www.amazon.com/dp/B0CX23F8H8"
+    product_url = os.getenv("INPUT_PRODUCT_URL", "").strip()
+    if not product_url or product_url == "https://www.amazon.com/dp/B0CX23F8H8":
+        product_url = "https://www.amazon.com/Stylus-Pen-iPad-Generation-Alternative/dp/B0DP24FQ5M"
+
     image_url = os.getenv("INPUT_IMAGE_URL", "").strip()
     theme = os.getenv("INPUT_THEME", "").strip() or "dark_cyan"
     brand_name = os.getenv("INPUT_BRAND_NAME", "").strip() or "@TechGearDaily"

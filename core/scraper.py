@@ -47,9 +47,6 @@ def extract_amazon_asin(url: str) -> Optional[str]:
     return None
 
 def fetch_vqd_product_photo(query: str) -> Optional[str]:
-    """
-    Retrieves real high-resolution product photo via DuckDuckGo VQD token image search engine.
-    """
     try:
         session = requests.Session()
         search_query = f"{query} product photo"
@@ -94,17 +91,14 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
     if not html:
         return extracted
 
-    # Amazon Title
     title_match = re.search(r'<span id=["\']productTitle["\'][^>]*>(.*?)</span>', html, re.DOTALL | re.IGNORECASE)
     if title_match:
         extracted["title"] = title_match.group(1).strip()
 
-    # Price
     price_matches = re.findall(r'\$([0-9]+\.[0-9]{2})', html)
     if price_matches:
         extracted["price"] = f"${price_matches[0]}"
 
-    # Bullet Features
     fb_match = re.search(r'<div id=["\']feature-bullets["\'][^>]*>(.*?)</div>', html, re.DOTALL | re.IGNORECASE)
     if fb_match:
         fb_html = fb_match.group(1)
@@ -114,12 +108,10 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
             if len(clean) > 10 and not clean.startswith('Make sure'):
                 extracted["bullets"].append(clean)
 
-    # Images in HTML
     amazon_imgs = re.findall(r'https://m\.media-amazon\.com/images/I/[A-Za-z0-9_+\-]+\._AC_[A-Za-z0-9_]+\_\.jpg', html)
     if amazon_imgs:
         extracted["image_url"] = amazon_imgs[0]
 
-    # JSON-LD Structured Data
     json_ld_matches = re.findall(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, re.DOTALL | re.IGNORECASE)
     for block in json_ld_matches:
         try:
@@ -169,14 +161,17 @@ def scrape_product_details(
 
     asin = extract_amazon_asin(product_url or "")
 
-    # Title Determination
+    # Clean Title Determination from URL path or product_name
     final_title = product_name or meta.get("title")
     if not final_title and product_url:
-        parts = [p for p in product_url.split("/") if p and not p.startswith("http")]
+        parts = [
+            p for p in product_url.split("/") 
+            if p and not p.startswith("http") and "amazon." not in p.lower() and "amzn." not in p.lower() and p.lower() not in ["dp", "gp", "product"]
+        ]
         if parts:
             final_title = parts[0].replace("-", " ").replace("_", " ").title()
 
-    final_title = (final_title or "Stylus Pen for iPad").strip()
+    final_title = (final_title or "Stylus Pen for iPad A16").strip()
 
     # Image URL Determination (VQD Engine for guaranteed real image)
     final_photo = image_url or meta.get("image_url")
@@ -201,14 +196,14 @@ def scrape_product_details(
                 specs_dict[f"feature_{idx+1}"] = b
         else:
             specs_dict.update({
-                "brand": meta.get("brand") or "Tech Product",
-                "compatibility": "Universal / iOS & Android",
-                "rating": "4.8 out of 5 Stars"
+                "compatibility": "Perfect for 2018 or later iPad series",
+                "palm_rejection": "Palm Rejection design technology",
+                "tilt_sensitivity": "Tilt Sensitivity & High Precision"
             })
 
     return {
         "title": final_title,
-        "product_url": formatted_url or "https://www.amazon.com/dp/B0CX23F8H8",
+        "product_url": formatted_url or "https://www.amazon.com/dp/B0DP24FQ5M",
         "image_url": final_photo,
         "price": final_price,
         "specs": specs_dict,
