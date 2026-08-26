@@ -60,16 +60,19 @@ def get_font(size: int, bold: bool = False):
     except Exception:
         return ImageFont.load_default()
 
-def fetch_product_image(image_url: Optional[str], target_size: tuple = (400, 400)) -> Optional[Image.Image]:
+def fetch_product_image(image_url: Optional[str], target_size: tuple = (360, 360)) -> Optional[Image.Image]:
     """
     Fetches and resizes real product image over HTTP.
     """
     if not image_url:
         return None
     try:
-        res = requests.get(image_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=5)
-        if res.status_code == 200:
-            img = Image.open(io.BytesIO(res.content)).convert("RGBA")
+        res = requests.get(image_url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}, timeout=6)
+        if res.status_code == 200 and len(res.content) > 1000:
+            img = Image.open(io.BytesIO(res.content))
+            # Convert to RGB to flatten transparency issues for JPEGs/PNGs
+            if img.mode != "RGB":
+                img = img.convert("RGB")
             img = ImageOps.fit(img, target_size, method=Image.Resampling.LANCZOS)
             return img
     except Exception as e:
@@ -131,7 +134,8 @@ def render_slide_card(
         draw.rounded_rectangle(photo_box, radius=24, fill=palette["bg"], outline=palette["accent"], width=3)
 
         if prod_img:
-            img.paste(prod_img, (width // 2 - 180, 600), prod_img)
+            # Paste RGB product image directly onto canvas
+            img.paste(prod_img, (width // 2 - 180, 600))
         else:
             draw.text((width // 2 - 120, 750), "📷 PRODUCT PHOTO", fill=palette["accent_secondary"], font=get_font(24, bold=True))
 
