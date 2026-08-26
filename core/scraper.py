@@ -1,9 +1,10 @@
 """
-Product Spec Scraper & Amazon Affiliate URL Parser with Real Product Image Extraction
+Product Spec Scraper & Amazon Affiliate URL Parser with Automatic Real Product Image Extraction
 """
 
 import re
 import urllib.parse
+import requests
 from typing import Dict, Any, Optional
 
 def format_amazon_affiliate_url(url: str, tag: Optional[str] = None) -> str:
@@ -28,6 +29,46 @@ def format_amazon_affiliate_url(url: str, tag: Optional[str] = None) -> str:
         ))
     return url
 
+def auto_find_product_image(product_url: Optional[str] = None, product_name: Optional[str] = None) -> str:
+    """
+    Automatically searches and extracts real high-resolution product photo from web page or search API.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+
+    # 1. Scrape real product image from URL HTML (Amazon / OpenGraph)
+    if product_url:
+        try:
+            res = requests.get(product_url, headers=headers, timeout=4)
+            if res.status_code == 200:
+                html = res.text
+
+                # Match Amazon high-res product image pattern
+                amazon_imgs = re.findall(r'https://m\.media-amazon\.com/images/I/[A-Za-z0-9_+\-]+\._AC_[A-Za-z0-9_]+\_\.jpg', html)
+                if amazon_imgs:
+                    return amazon_imgs[0]
+
+                # Match OpenGraph og:image
+                og_imgs = re.findall(r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', html, re.IGNORECASE)
+                if og_imgs:
+                    return og_imgs[0]
+        except Exception as e:
+            print(f"[Warning] Product URL image scraping skipped: {e}")
+
+    # 2. Auto-search product photo via DuckDuckGo Image Search API
+    search_term = product_name or "wireless headphones tech product"
+    try:
+        search_url = f"https://duckduckgo.com/i.js?q={urllib.parse.quote(search_term)}"
+        res = requests.get(search_url, headers=headers, timeout=3)
+        if res.status_code == 200:
+            results = res.json().get("results", [])
+            if results and "image" in results[0]:
+                return results[0]["image"]
+    except Exception as e:
+        print(f"[Warning] Automated image search skipped: {e}")
+
+    # 3. Default high-resolution tech asset fallback
+    return "https://raw.githubusercontent.com/meanusarcanus/shopee_scraper_api/master/assets/shopee_logo.jpg"
+
 def scrape_product_details(
     product_url: Optional[str] = None,
     product_name: Optional[str] = None,
@@ -36,18 +77,18 @@ def scrape_product_details(
     amazon_affiliate_tag: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Scrapes product specifications and real product image URLs.
+    Scrapes product specifications and automatically searches for real product photo.
     """
     formatted_url = format_amazon_affiliate_url(product_url or "", amazon_affiliate_tag)
 
-    # High-quality fallback product photo asset
-    default_photo = image_url or "https://raw.githubusercontent.com/meanusarcanus/shopee_scraper_api/master/assets/shopee_logo.jpg"
+    # Automatically search for real product photo if user didn't explicitly pass one
+    final_photo_url = image_url or auto_find_product_image(product_url=product_url, product_name=product_name)
 
     if product_name and product_specs:
         return {
             "title": product_name.strip(),
             "product_url": formatted_url,
-            "image_url": default_photo,
+            "image_url": final_photo_url,
             "price": product_specs.get("price", "$149.99"),
             "specs": product_specs,
             "features": list(product_specs.values()),
@@ -72,7 +113,7 @@ def scrape_product_details(
     return {
         "title": product_name or clean_title,
         "product_url": formatted_url or "https://www.amazon.com/dp/B0CX23F8H8",
-        "image_url": default_photo,
+        "image_url": final_photo_url,
         "price": "$149.99",
         "specs": product_specs or fallback_specs,
         "features": list((product_specs or fallback_specs).values()),
