@@ -42,7 +42,7 @@ def generate_carousel_copy(
             "generationConfig": {"response_mime_type": "application/json"}
         }
         try:
-            res = requests.post(endpoint, headers=headers, json=payload, timeout=8)
+            res = requests.post(endpoint, headers=headers, json=payload, timeout=18)
             if res.status_code == 200:
                 raw_text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
                 return json.loads(raw_text)
@@ -50,16 +50,26 @@ def generate_carousel_copy(
             print(f"[Warning] Gemini Copywriter Call failed: {e}")
 
     # High-converting Fallback Copy Engine
-    pros = ["Top-tier sound quality with deep bass", "Ultra-comfortable 40-hour battery life", "Fast USB-C Quick Charging"]
-    cons = ["Carrying case sold separately", "Slightly bulky for small heads"]
+    pros = ["Top-tier build quality & high precision", "Fast charging & long-lasting battery", "Plug-and-play instant connectivity"]
+    cons = ["Carrying sleeve sold separately", "Compact form factor"]
 
     amazon_cta = "🔗 Link in Bio (Amazon Prime): amzn.to/3xY8z" if "amazon" in url.lower() else f"🔗 Shop at {brand}"
     comment_cta = "💬 Comment 'AMAZON' below to get the direct link in your DMs!" if "amazon" in url.lower() else "💬 Drop a comment below with your thoughts!"
 
+    # Format specs items cleanly
+    spec_items = []
+    for k, v in list(specs.items())[:4]:
+        if k == "price":
+            spec_items.append(f"Price: {v}")
+        elif k.startswith("spec_") or k.startswith("feature_"):
+            spec_items.append(str(v))
+        else:
+            spec_items.append(f"{k.replace('_', ' ').title()}: {v}")
+
     caption_text = (
         f"🎧 Looking for the ultimate upgrade? Check out our full review for {title}! ⚡\n\n"
         "✨ Key Highlights:\n"
-        + "\n".join([f"- {k.replace('_', ' ').title()}: {v}" for k, v in list(specs.items())[:3]]) + "\n\n"
+        + "\n".join([f"- {item}" for item in spec_items[:3]]) + "\n\n"
         f"⭐ Verdict: 9.4/10 (Must Buy)\n\n"
         f"{amazon_cta}\n"
         f"{comment_cta}\n\n"
@@ -74,7 +84,7 @@ def generate_carousel_copy(
         },
         "slide_2_specs": {
             "title": "Technical Specs & Features",
-            "items": [f"{k.replace('_', ' ').title()}: {v}" for k, v in list(specs.items())[:4]]
+            "items": spec_items if spec_items else ["Price: $29.99", "Build: Premium Grade", "Battery: Extended Playtime", "Warranty: 1-Year Included"]
         },
         "slide_3_pros_cons": {
             "title": "Pros & Cons Breakdown",
@@ -84,7 +94,7 @@ def generate_carousel_copy(
         "slide_4_verdict": {
             "title": "Final Verdict & Rating",
             "score": "9.4 / 10",
-            "summary": "Outstanding build quality and battery life. Highly recommended for daily listening."
+            "summary": "Outstanding build quality and precision. Highly recommended daily essential."
         },
         "slide_5_cta": {
             "title": "Where To Buy",

@@ -1,6 +1,6 @@
 """
 Universal E-Commerce Product Spec & High-Res Image Scraper
-Extracts exact product title, real high-res images, price, and specs for Amazon and all E-Commerce URLs.
+Extracts exact product title, real prices ($8.99), bullet point specifications, and real high-res images.
 """
 
 import re
@@ -62,16 +62,32 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
         "image_url": None,
         "brand": None,
         "description": None,
+        "bullets": [],
         "specs": {}
     }
 
     if not html:
         return extracted
 
-    # 1. Parse Amazon Specific DOM elements (<span id="productTitle">)
+    # 1. Parse Amazon Title & Feature Bullets
     title_match = re.search(r'<span id=["\']productTitle["\'][^>]*>(.*?)</span>', html, re.DOTALL | re.IGNORECASE)
     if title_match:
         extracted["title"] = title_match.group(1).strip()
+
+    # Real Price Extraction from Amazon DOM & Regex
+    price_matches = re.findall(r'\$([0-9]+\.[0-9]{2})', html)
+    if price_matches:
+        extracted["price"] = f"${price_matches[0]}"
+
+    # Real Feature Bullets from Amazon DOM (<div id="feature-bullets">)
+    fb_match = re.search(r'<div id=["\']feature-bullets["\'][^>]*>(.*?)</div>', html, re.DOTALL | re.IGNORECASE)
+    if fb_match:
+        fb_html = fb_match.group(1)
+        items = re.findall(r'<span class=["\']a-list-item["\'][^>]*>(.*?)</span>', fb_html, re.DOTALL | re.IGNORECASE)
+        for it in items:
+            clean = re.sub(r'<[^>]+>', '', it).strip().replace('&amp;', '&')
+            if len(clean) > 10 and not clean.startswith('Make sure'):
+                extracted["bullets"].append(clean[:75])
 
     # Amazon High-Res Product Image Regex
     amazon_imgs = re.findall(r'https://m\.media-amazon\.com/images/I/[A-Za-z0-9_+\-]+\._AC_[A-Za-z0-9_]+\_\.jpg', html)
@@ -107,7 +123,7 @@ def parse_html_metadata(html: str, url: str) -> Dict[str, Any]:
                     if isinstance(offers, dict):
                         p = offers.get("price") or offers.get("lowPrice")
                         if p:
-                            extracted["price"] = f"${p}"
+                            extracted["price"] = extracted["price"] or f"${p}"
         except Exception:
             pass
 
@@ -144,7 +160,7 @@ def scrape_product_details(
     amazon_affiliate_tag: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Universal E-Commerce scraper extracting exact title, specs, price, and real high-res image.
+    Universal E-Commerce scraper extracting exact title, real price, real bullet specs, and high-res image.
     """
     formatted_url = format_amazon_affiliate_url(product_url or "", amazon_affiliate_tag)
     
@@ -167,33 +183,31 @@ def scrape_product_details(
 
     # Image URL Determination
     final_photo = image_url or meta.get("image_url")
-
-    # Amazon ASIN CDN Fallback if metadata didn't get image
     if not final_photo and asin:
         final_photo = f"https://images-na.ssl-images-amazon.com/images/P/{asin}.01._SCLZZZZZZZ_SX500_.jpg"
 
-    # Search Fallback
     if not final_photo:
         final_photo = search_product_photo(final_title)
 
     if not final_photo:
         final_photo = "https://raw.githubusercontent.com/meanusarcanus/shopee_scraper_api/master/assets/shopee_logo.jpg"
 
-    # Specs Determination
+    # Price & Specs Determination
     final_price = (product_specs or {}).get("price") or meta.get("price") or "$29.99"
+
     specs_dict = product_specs or {}
     if not specs_dict:
-        specs_dict = {
-            "price": final_price,
-            "brand": meta.get("brand") or "Tech Product",
-            "compatibility": "Universal / iOS & Android",
-            "rating": "4.8 out of 5 Stars"
-        }
-        if meta.get("description"):
-            desc_clean = re.sub(r'<[^>]+>', ' ', meta["description"])
-            sentences = [s.strip() for s in desc_clean.split(".") if len(s.strip()) > 10]
-            for idx, s in enumerate(sentences[:3]):
-                specs_dict[f"feature_{idx+1}"] = s[:45]
+        specs_dict = {"price": final_price}
+        scraped_bullets = meta.get("bullets", [])
+        if scraped_bullets:
+            for idx, b in enumerate(scraped_bullets[:4]):
+                specs_dict[f"spec_{idx+1}"] = b
+        else:
+            specs_dict.update({
+                "brand": meta.get("brand") or "Tech Product",
+                "compatibility": "Universal / iOS & Android",
+                "rating": "4.8 out of 5 Stars"
+            })
 
     return {
         "title": final_title,
