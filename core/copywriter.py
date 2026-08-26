@@ -1,11 +1,70 @@
 """
 AI Technical Copywriter Generator for Instagram Carousel Posts
+Generates product-specific Pros & Cons and formatted specs for all product categories.
 """
 
 import os
 import json
 import requests
 from typing import Dict, Any, Optional
+
+def generate_product_pros_cons(title: str, specs: Dict[str, Any]) -> tuple:
+    """
+    Generates product-specific Pros and Cons based on product title and features.
+    """
+    t_lower = title.lower()
+
+    if any(w in t_lower for w in ["stylus", "pencil", "pen", "ipad", "tablet"]):
+        pros = [
+            "Palm rejection for natural hand placement",
+            "Tilt sensitivity for precise shading & line weight",
+            "Fast USB-C charging with long-lasting battery"
+        ]
+        cons = [
+            "Requires double-tap top button to turn on",
+            "Compatible only with 2018 and newer iPad models"
+        ]
+    elif any(w in t_lower for w in ["headphone", "earbud", "audio", "speaker", "sound"]):
+        pros = [
+            "Active Noise Cancellation with deep bass profile",
+            "Ergonomic fit for long listening sessions",
+            "Multi-device Bluetooth 5.4 pairing"
+        ]
+        cons = [
+            "Protective case sold separately",
+            "Takes ~2 hours for full battery recharge"
+        ]
+    elif any(w in t_lower for w in ["watch", "band", "tracker", "smartwatch"]):
+        pros = [
+            "Comprehensive health & workout tracking",
+            "Vibrant AMOLED touch display",
+            "Water-resistant build for swimming"
+        ]
+        cons = [
+            "Requires companion smartphone app",
+            "Battery needs charging every 2-3 days"
+        ]
+    else:
+        # Generic Product Pros derived from feature bullets
+        bullets = [str(v) for v in specs.values() if isinstance(v, str) and len(v) > 10]
+        if len(bullets) >= 2:
+            pros = [
+                bullets[0][:50],
+                bullets[1][:50],
+                "Premium build quality & high durability"
+            ]
+        else:
+            pros = [
+                "Top-tier performance and precise engineering",
+                "Compact, modern, and user-friendly design",
+                "Instant plug-and-play setup"
+            ]
+        cons = [
+            "Power adapter / accessories sold separately",
+            "High demand may limit stock availability"
+        ]
+
+    return pros, cons
 
 def generate_carousel_copy(
     product_data: Dict[str, Any],
@@ -22,6 +81,8 @@ def generate_carousel_copy(
     specs = product_data.get("specs", {})
     url = product_data.get("product_url", "")
     brand = brand_name or "@TechGearDaily"
+
+    pros, cons = generate_product_pros_cons(title, specs)
 
     if api_key:
         endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
@@ -49,13 +110,6 @@ def generate_carousel_copy(
         except Exception as e:
             print(f"[Warning] Gemini Copywriter Call failed: {e}")
 
-    # High-converting Fallback Copy Engine
-    pros = ["Top-tier build quality & high precision", "Fast charging & long-lasting battery", "Plug-and-play instant connectivity"]
-    cons = ["Carrying sleeve sold separately", "Compact form factor"]
-
-    amazon_cta = "🔗 Link in Bio (Amazon Prime): amzn.to/3xY8z" if "amazon" in url.lower() else f"🔗 Shop at {brand}"
-    comment_cta = "💬 Comment 'AMAZON' below to get the direct link in your DMs!" if "amazon" in url.lower() else "💬 Drop a comment below with your thoughts!"
-
     # Format specs items cleanly
     spec_items = []
     for k, v in list(specs.items())[:4]:
@@ -66,15 +120,18 @@ def generate_carousel_copy(
         else:
             spec_items.append(f"{k.replace('_', ' ').title()}: {v}")
 
+    amazon_cta = "🔗 Link in Bio (Amazon Prime): amzn.to/3xY8z" if "amazon" in url.lower() else f"🔗 Shop at {brand}"
+    comment_cta = "💬 Comment 'AMAZON' below to get the direct link in your DMs!" if "amazon" in url.lower() else "💬 Drop a comment below with your thoughts!"
+
     caption_text = (
-        f"🎧 Looking for the ultimate upgrade? Check out our full review for {title}! ⚡\n\n"
+        f"⚡ Check out our full review for {title}! 📱\n\n"
         "✨ Key Highlights:\n"
         + "\n".join([f"- {item}" for item in spec_items[:3]]) + "\n\n"
         f"⭐ Verdict: 9.4/10 (Must Buy)\n\n"
         f"{amazon_cta}\n"
         f"{comment_cta}\n\n"
         f"Follow {brand} for daily tech reviews & deals! 🔥\n\n"
-        "#TechReview #AmazonDeals #AudioTech #GadgetGear #HeadphonesReview #TechSetup"
+        "#TechReview #AmazonDeals #GadgetReview #TechSetup #SmartTech"
     )
 
     return {
@@ -84,7 +141,7 @@ def generate_carousel_copy(
         },
         "slide_2_specs": {
             "title": "Technical Specs & Features",
-            "items": spec_items if spec_items else ["Price: $29.99", "Build: Premium Grade", "Battery: Extended Playtime", "Warranty: 1-Year Included"]
+            "items": spec_items if spec_items else ["Price: $17.54", "Build: High Precision", "Battery: Extended Playtime", "Warranty: 1-Year Included"]
         },
         "slide_3_pros_cons": {
             "title": "Pros & Cons Breakdown",
@@ -94,7 +151,7 @@ def generate_carousel_copy(
         "slide_4_verdict": {
             "title": "Final Verdict & Rating",
             "score": "9.4 / 10",
-            "summary": "Outstanding build quality and precision. Highly recommended daily essential."
+            "summary": f"Outstanding performance and build quality for {title[:25]}. Highly recommended daily essential."
         },
         "slide_5_cta": {
             "title": "Where To Buy",

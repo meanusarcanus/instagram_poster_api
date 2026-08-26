@@ -144,35 +144,44 @@ def render_slide_card(
         draw.text((width // 2 - 140, 1050), "SWIPE FOR SPECS ➔", fill=palette["bg"], font=get_font(24, bold=True))
 
     elif slide_num == 2:
-        # SPECS SLIDE
+        # SPECS SLIDE (Multi-Line Text Wrapping)
         s_data = slide_data.get("slide_2_specs", {})
         draw.text((60, 140), s_data.get("title", "Technical Specifications"), fill=palette["accent"], font=font_title)
 
         items = s_data.get("items", ["Spec 1", "Spec 2", "Spec 3", "Spec 4"])
-        y_pos = 240
+        y_pos = 230
+        font_spec = get_font(26, bold=False)
+
         for item in items[:4]:
-            draw.rounded_rectangle([(60, y_pos), (width - 60, y_pos + 190)], radius=20, fill=palette["card_bg"])
-            draw.text((100, y_pos + 40), "• " + str(item)[:55], fill=palette["text"], font=font_body)
-            y_pos += 220
+            wrapped_item = textwrap.fill("• " + str(item), width=42)
+            num_lines = len(wrapped_item.split("\n"))
+            box_height = max(140, num_lines * 34 + 40)
+            
+            draw.rounded_rectangle([(60, y_pos), (width - 60, y_pos + box_height)], radius=20, fill=palette["card_bg"])
+            draw.text((90, y_pos + 20), wrapped_item, fill=palette["text"], font=font_spec)
+            y_pos += box_height + 20
 
     elif slide_num == 3:
-        # PROS & CONS SLIDE
+        # PROS & CONS SLIDE (Multi-Line Text Wrapping)
         pc_data = slide_data.get("slide_3_pros_cons", {})
         draw.text((60, 140), pc_data.get("title", "Pros & Cons Breakdown"), fill=palette["accent"], font=font_title)
 
         draw.rounded_rectangle([(60, 240), (width - 60, 660)], radius=24, fill=palette["card_bg"])
-        draw.text((100, 270), "✅ THE GOOD (PROS)", fill=palette["pro_color"], font=get_font(30, bold=True))
-        y_p = 350
+        draw.text((100, 270), "✅ THE GOOD (PROS)", fill=palette["pro_color"], font=get_font(28, bold=True))
+        y_p = 340
+        font_pc = get_font(26, bold=False)
         for pro in pc_data.get("pros", [])[:3]:
-            draw.text((100, y_p), f"✓ {pro[:45]}", fill=palette["text"], font=font_body)
-            y_p += 70
+            wrapped_pro = textwrap.fill("✓ " + str(pro), width=40)
+            draw.text((100, y_p), wrapped_pro, fill=palette["text"], font=font_pc)
+            y_p += (len(wrapped_pro.split("\n")) * 32) + 20
 
         draw.rounded_rectangle([(60, 700), (width - 60, 1120)], radius=24, fill=palette["card_bg"])
-        draw.text((100, 730), "⚠️ CONSIDERATIONS (CONS)", fill=palette["con_color"], font=get_font(30, bold=True))
-        y_c = 810
+        draw.text((100, 730), "⚠️ CONSIDERATIONS (CONS)", fill=palette["con_color"], font=get_font(28, bold=True))
+        y_c = 800
         for con in pc_data.get("cons", [])[:2]:
-            draw.text((100, y_c), f"✗ {con[:45]}", fill=palette["text"], font=font_body)
-            y_c += 70
+            wrapped_con = textwrap.fill("✗ " + str(con), width=40)
+            draw.text((100, y_c), wrapped_con, fill=palette["text"], font=font_pc)
+            y_c += (len(wrapped_con.split("\n")) * 32) + 20
 
     elif slide_num == 4:
         # VERDICT & SCORE SLIDE
